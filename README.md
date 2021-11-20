@@ -17,6 +17,7 @@ You can directly execute the corresponding files within a pycharm project.
 
 ### For Yelp
 The raw data file can be put under /Yelp file
+
 Converting json to csv files:
 ```
 python Yelp_json2csv.py
@@ -34,6 +35,7 @@ python utils/meta-path.py
 
 ### For Tmall
 The raw datacan be put under /Tmall file 
+
 Preprocessing and filtering Tmall dataset:
 ```
 python Tmall/tmall_preprocess.py
