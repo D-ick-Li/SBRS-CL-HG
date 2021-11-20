@@ -5,8 +5,19 @@ import scipy.sparse as sp
 import numpy as np
 import copy
 
+"""
+This section is inspired by GraphCL in https://github.com/Shen-Lab/GraphCL
+"""
+
 
 def aug_random_mask(input_mask, input_items, drop_percent=0.2):
+    """
+    This function randomly masks the node attribute
+    :param input_mask: the original mask of items in generating batches
+    :param input_items: the original input (item_id)
+    :param drop_percent: mask rate
+    :return: augmented node information
+    """
     mask_graph = input_mask.sum(axis=1)
     mask_graph[mask_graph > 1] = 1
     node_num = mask_graph.sum(axis=1)
@@ -23,6 +34,9 @@ def aug_random_mask(input_mask, input_items, drop_percent=0.2):
 
 
 def aug_random_edge(input_adj, input_mask, drop_percent=0.2):
+    """
+    The erasive version of edge perturbation
+    """
     percent = drop_percent / 2
     row_idx, col_idx = input_adj.nonzero()  # 有几个维度就返回几个array,比如一个array表示行，另一个表示列
 
@@ -57,6 +71,14 @@ def aug_random_edge(input_adj, input_mask, drop_percent=0.2):
 
 
 def aug_drop_node(input_items, input_masks, input_adj, drop_percent=0.2):
+    """
+    The node drop augmentation.
+    :param input_items:
+    :param input_masks:
+    :param input_adj:
+    :param drop_percent:
+    :return:
+    """
     batch_num = input_masks.shape[0]
     node_num = input_masks.sum(axis=1)
     drop_num = np.array(node_num * drop_percent, dtype=np.int32)  # number of drop nodes
@@ -78,6 +100,9 @@ def aug_drop_node(input_items, input_masks, input_adj, drop_percent=0.2):
 
 
 def aug_subgraph(input_fea, input_adj, drop_percent=0.2):
+    """
+    Subgraph Sampling in GraphCL
+    """
     input_adj = torch.tensor(input_adj.todense().tolist())
     input_fea = input_fea.squeeze(0)
     node_num = input_fea.shape[0]
@@ -123,12 +148,6 @@ def delete_row_col(input_matrix, drop_list, only_row=False):
 
 def execute_random_edge(sess_adj, sess_masks, aug_idx=1):
     aug_adj = copy.deepcopy(sess_adj)
-    """
-    pool = Pool(2)
-    social_list = [mp_adjs[1] for mp_adjs in sess_adj]
-    param_list = list(zip(social_list, sess_masks.tolist()))
-    aug_list = pool.map(aug_random_edge, param_list)
-    """
     for i in range(len(sess_adj)):
         aug_slice = aug_random_edge(sess_adj[i][aug_idx], sess_masks[i])
         aug_adj[i][aug_idx] = aug_slice
@@ -136,6 +155,12 @@ def execute_random_edge(sess_adj, sess_masks, aug_idx=1):
 
 
 def get_degree(adjs, masks):
+    """
+    Get the node degree
+    :param adjs: adjacent matrix
+    :param masks: mask of edges
+    :return: The array of the degree of each edge.
+    """
     node_max = 0
     for adj in adjs:
         if adj.max() > node_max:
@@ -150,6 +175,10 @@ def get_degree(adjs, masks):
 
 
 def degree_weights(sess_adjs, sess_edge_mask, degree_list, threshold=0.6, drop_rate=0.6):
+    """
+    Calculate the edge centrality on target node degrees
+    Please refer to Eq.(2) and (3) for more details
+    """
     # weight_list= []
     for i in range(len(sess_edge_mask)):
         weight_temp = np.zeros(int(sess_edge_mask[i].sum()))
@@ -173,6 +202,12 @@ def degree_weights(sess_adjs, sess_edge_mask, degree_list, threshold=0.6, drop_r
 
 
 def adaptive_drop_edge(sess_adjs, sess_edge_mask):
+    """
+    Our proposed adaptive edge perturbation
+    :param sess_adjs: adjacent matrix
+    :param sess_edge_mask: mask of edges
+    :return: the augmented adjacent matrix
+    """
     sess_adj_new = []
     sess_adjs_temp = copy.deepcopy(sess_adjs)
     for i in range(len(sess_adjs)):
